@@ -37,24 +37,33 @@ from keras.layers import Dropout
 # Using ANN
 # Initialising classifier
 clf = Sequential()
+
 # Adding Input layer and first hidden layer
-clf.add(Dense(output_dim = 25, kernel_initializer='uniform', activation='relu', input_dim = 40))
+clf.add(Dense(output_dim = 28, kernel_initializer='uniform', activation='relu', input_dim = 40))
 clf.add(Dropout(rate=0.1))
+
 # Adding fully connected layer
-clf.add(Dense(output_dim = 25, activation='relu', kernel_initializer='uniform'))
-clf.add(Dropout(rate=0.1))
+clf.add(Dense(output_dim = 33, activation='relu', kernel_initializer='uniform'))
+clf.add(Dropout(rate=0.2))
+
 # Adding output layer
 clf.add(Dense(6,kernel_initializer='uniform', activation='softmax'))
 
 # Compiling classifier
-clf.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
+clf.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
 # importing tensorflow for training on gpu
 import tensorflow as tf
 with tf.device('/gpu:0'):
-    clf.fit(X_train, y_train, batch_size=10, epochs=1000, validation_data= (X_test, y_test))
+    clf.fit(X_train, y_train, batch_size=8, epochs=500, validation_data= (X_test, y_test))
 
 
+from keras.models import model_from_json
+model_json = clf.to_json()
+with open("model.json", "w") as json_file:
+    json_file.write(model_json)
+# serialize weights to HDF5
+clf.save_weights("model.h5")
 
 y_pred = clf.predict(X_test)
 y_pred = ( y_pred > 0.5 )
