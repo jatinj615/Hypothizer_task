@@ -5,6 +5,9 @@ import pandas as pd
 
 df = pd.read_pickle('df_train_api.pk')
 
+df0 = df.query('label==0').sample(frac = 0.1)
+df = df[df.label != 0]
+df = pd.concat([df, df0], ignore_index=True)
 #df = df[df.label != 0]
 X = df[['groups']]
 
@@ -30,51 +33,27 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, rand
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import Dropout
-from keras.layers import Embedding
-from keras.layers import SpatialDropout1D
-from keras.layers import LSTM
-from keras.wrappers.scikit_learn import KerasClassifier
-from sklearn.model_selection import cross_val_score
 
-# Using RNN
+# Using ANN
 # Initialising classifier
 clf = Sequential()
-# Adding First Embedded Layer
-clf.add(Embedding(max_features, 128, input_length=X.shape[1]))
-clf.add(SpatialDropout1D(0.9))
-
-# Adding Lstm Layer
-clf.add(LSTM(128, dropout=0.8, recurrent_dropout=0.8))
-
+# Adding Input layer and first hidden layer
+clf.add(Dense(output_dim = 25, kernel_initializer='uniform', activation='relu', input_dim = 40))
+clf.add(Dropout(rate=0.1))
 # Adding fully connected layer
-clf.add(Dense(128, activation='relu'))
-
+clf.add(Dense(output_dim = 25, activation='relu', kernel_initializer='uniform'))
+clf.add(Dropout(rate=0.1))
 # Adding output layer
-clf.add(Dense(6, activation='softmax'))
+clf.add(Dense(6,kernel_initializer='uniform', activation='softmax'))
 
 # Compiling classifier
-clf.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+clf.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 
 # importing tensorflow for training on gpu
 import tensorflow as tf
 with tf.device('/gpu:0'):
-    clf.fit(X_train, y_train, batch_size=32, epochs=40, validation_data= (X_test, y_test))
+    clf.fit(X_train, y_train, batch_size=10, epochs=1000, validation_data= (X_test, y_test))
 
-def build_clf():
-    clf = Sequential()
-    clf.add(Embedding(max_features, 128, input_length=X.shape[1]))
-    clf.add(SpatialDropout1D(0.6))
-    clf.add(LSTM(128, dropout=0.6, recurrent_dropout=0.5))
-    clf.add(Dense(128, activation='relu'))
-    clf.add(Dense(6, activation='softmax'))
-    clf.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-    return clf
-
-clf = KerasClassifier(build_fn= build_clf, batch_size = 32, epochs = 30)
-scores = cross_val_score(estimator= clf, X = X_train, y = y_train, cv = 10, n_jobs = -1)
-
-mean = np.mean(scores)
-variance = np.std(scores)
 
 
 y_pred = clf.predict(X_test)
